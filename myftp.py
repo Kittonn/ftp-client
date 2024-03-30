@@ -18,8 +18,8 @@ class MyFTP:
       line = input('To: ').strip().split()
 
       if len(line) > 2 or len(line) == 0:
-          print('Usage: open host name [port]')
-          return
+        print('Usage: open host name [port]')
+        return
 
       host = line[0]
       port = line[1] if len(line) == 2 else port
@@ -79,8 +79,8 @@ class MyFTP:
 
   def disconnect(self):
     if not self.socket_is_connected():
-        print('Not connected.')
-        return
+      print('Not connected.')
+      return
     
     self.send_cmd('QUIT')
     print(self.get_response(), end="")
@@ -88,32 +88,32 @@ class MyFTP:
       
   def quit(self):
     if self.socket_is_connected():
-        self.send_cmd('QUIT')
-        print(self.get_response(), end="")
-        self.close_socket()
+      self.send_cmd('QUIT')
+      print(self.get_response(), end="")
+      self.close_socket()
     
     exit()
 
   def pwd(self):
     if not self.socket_is_connected():
-        print('Not connected.')
-        return
+      print('Not connected.')
+      return
     
     self.send_cmd('XPWD')
     print(self.get_response(), end="")
     
   def ascii(self):
     if not self.socket_is_connected():
-        print('Not connected.')
-        return
+      print('Not connected.')
+      return
     
     self.send_cmd('TYPE A')
     print(self.get_response(), end="")
 
   def binary(self):
     if not self.socket_is_connected():
-        print('Not connected.')
-        return
+      print('Not connected.')
+      return
     
     self.send_cmd('TYPE I')
     print(self.get_response(), end="")
