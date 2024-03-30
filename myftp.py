@@ -121,7 +121,7 @@ class MyFTP:
       print('Not connected.')
       return
 
-    path = args[0] if args else input('Remote directory ')
+    path = args[0] if args else input('Remote directory ').split()[0]
 
     self.send_cmd(f'CWD {path}')
     print(self.get_response(), end="")
