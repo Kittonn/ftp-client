@@ -78,24 +78,48 @@ class MyFTP:
         return
 
   def disconnect(self):
-    try:
-      self.send_cmd('QUIT')
-      print(self.get_response(), end="")
-      self.close_socket()
-      return
-    except Exception as e:
-      print('Not connected.')
-      return
-  
+    if not self.socket_is_connected():
+        print('Not connected.')
+        return
+    
+    self.send_cmd('QUIT')
+    print(self.get_response(), end="")
+    self.close_socket()
+      
   def quit(self):
-    try:
+    if self.socket_is_connected():
         self.send_cmd('QUIT')
         print(self.get_response(), end="")
         self.close_socket()
-    except Exception as e:
-        pass
-    finally:
-        exit()
+    
+    exit()
+
+  def pwd(self):
+    if not self.socket_is_connected():
+        print('Not connected.')
+        return
+    
+    self.send_cmd('XPWD')
+    print(self.get_response(), end="")
+    
+  def ascii(self):
+    if not self.socket_is_connected():
+        print('Not connected.')
+        return
+    
+    self.send_cmd('TYPE A')
+    print(self.get_response(), end="")
+
+  def binary(self):
+    if not self.socket_is_connected():
+        print('Not connected.')
+        return
+    
+    self.send_cmd('TYPE I')
+    print(self.get_response(), end="")
+
+  def socket_is_connected(self):
+    return self.client_socket is not None and self.client_socket.fileno() != -1
 
   def send_cmd(self, cmd):
     self.client_socket.send(f'{cmd}\r\n'.encode())
@@ -131,8 +155,15 @@ def main():
       my_ftp.open(*arguments)
     elif command == 'disconnect':
       my_ftp.disconnect()
+    elif command == 'pwd':
+      my_ftp.pwd()
+    elif command == 'ascii':
+      my_ftp.ascii()
+    elif command == 'binary':
+      my_ftp.binary()
     else:
       print('Invalid command.')
+      continue
 
 
 if __name__ == '__main__':
