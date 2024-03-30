@@ -24,9 +24,9 @@ class MyFTP:
       host = line[0]
       port = line[1] if len(line) == 2 else port
     
-    self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
       # connect to host
+      self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       self.client_socket.connect((host, int(port)))
       
       print(f'Connected to {host}.')
@@ -52,27 +52,24 @@ class MyFTP:
     resp_code = resp.split()[0]
 
     # username is null
-    if resp_code == '501':
+    if resp.startswith('501'):
       print('Login failed.')
       return
     
     # request password
-    if resp_code == '331':
+    if resp.startswith('331'):
       password = input('Password: ')
       self.send_cmd(f'PASS {password}')
       resp = self.get_response()
       
       print(resp, end="") 
 
-      resp_code = resp.split()[0]
-
       # password is null or invalid
-      if resp_code == '530':
-        print('Login failed.')
+      if resp.startswith('530'):
         return
       
       # login successful
-      if resp_code == '230':
+      if resp.startswith('230'):
         return
 
   def disconnect(self):
@@ -116,15 +113,40 @@ class MyFTP:
     self.send_cmd('TYPE I')
     print(self.get_response(), end="")
 
-  def cd(self, *args):
+  def cd(self, path = None, *args):
     if not self.socket_is_connected():
       print('Not connected.')
       return
 
-    path = args[0] if args else input('Remote directory ').split()[0]
+    path = path if path else input('Remote directory ').strip()
 
     self.send_cmd(f'CWD {path}')
     print(self.get_response(), end="")
+
+  def rename(self, filename = None, new_filename = None, *args):
+    if not self.socket_is_connected():
+      print('Not connected.')
+      return
+
+    if not filename:
+      filename = input('From name ').strip()
+
+    if not new_filename:
+      new_filename = input('To name ').strip()
+
+    # check for valid filenames
+    self.send_cmd(f'RNFR {filename}')
+    resp = self.get_response()
+
+    print(resp, end="")
+
+    # check if file exists
+    if resp.startswith('350'):
+      # rename file
+      self.send_cmd(f'RNTO {new_filename}')
+      print(self.get_response(), end="")
+
+    return
 
   def socket_is_connected(self):
     return self.client_socket is not None and self.client_socket.fileno() != -1
@@ -172,6 +194,8 @@ def main():
       my_ftp.binary()
     elif command == 'cd':
       my_ftp.cd(*arguments)
+    elif command == 'rename':
+      my_ftp.rename(*arguments)
     else:
       print('Invalid command.')
       continue
