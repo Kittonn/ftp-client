@@ -116,6 +116,16 @@ class MyFTP:
     self.send_cmd('TYPE I')
     print(self.get_response(), end="")
 
+  def cd(self, *args):
+    if not self.socket_is_connected():
+      print('Not connected.')
+      return
+
+    path = args[0] if args else input('Remote directory ')
+
+    self.send_cmd(f'CWD {path}')
+    print(self.get_response(), end="")
+
   def socket_is_connected(self):
     return self.client_socket is not None and self.client_socket.fileno() != -1
 
@@ -160,6 +170,8 @@ def main():
       my_ftp.ascii()
     elif command == 'binary':
       my_ftp.binary()
+    elif command == 'cd':
+      my_ftp.cd(*arguments)
     else:
       print('Invalid command.')
       continue
