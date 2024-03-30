@@ -37,9 +37,7 @@ class MyFTP:
       print(self.get_response(), end="")
 
     # TODO: Handle exceptions for error cases
-    # TODO: check this exception is correct
     except socket.timeout as e:
-      # TODO: check return message
       print('> ftp: connect :Connection timed out')
 
     except Exception as e:
@@ -149,11 +147,12 @@ def main():
     command = args[0]
     arguments = args[1:]
 
+    # command can be lower case or upper case or mixed case
     if command == 'quit' or command == 'bye':
       my_ftp.quit()
     elif command == 'open':
       my_ftp.open(*arguments)
-    elif command == 'disconnect':
+    elif command == 'disconnect' or command == 'close':
       my_ftp.disconnect()
     elif command == 'pwd':
       my_ftp.pwd()
