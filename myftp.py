@@ -5,6 +5,11 @@ class MyFTP:
     self.client_socket = None
 
   def open(self, host = None, port = 21, *args):
+    # check if already connected
+    if self.client_socket:
+      print(f'Already connected to {host}, use disconnect first.')
+      return
+
     if args:
       print('Usage: open host name [port]')
       return
@@ -19,11 +24,6 @@ class MyFTP:
       host = line[0]
       port = line[1] if len(line) == 2 else port
     
-    # check if already connected
-    if self.client_socket:
-      print(f'Already connected to {host}, use disconnect first.')
-      return
-
     self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
       # connect to host
@@ -86,7 +86,17 @@ class MyFTP:
     except Exception as e:
       print('Not connected.')
       return
-    
+  
+  def quit(self):
+    try:
+        self.send_cmd('QUIT')
+        print(self.get_response(), end="")
+        self.close_socket()
+    except Exception as e:
+        pass
+    finally:
+        exit()
+
   def send_cmd(self, cmd):
     self.client_socket.send(f'{cmd}\r\n'.encode())
     
@@ -96,7 +106,7 @@ class MyFTP:
   def close_socket(self):
     self.client_socket.close()
     self.client_socket = None
-    
+
 def main():
   my_ftp = MyFTP()
 
@@ -115,8 +125,8 @@ def main():
     command = args[0]
     arguments = args[1:]
 
-    if command == 'quit':
-      break
+    if command == 'quit' or command == 'bye':
+      my_ftp.quit()
     elif command == 'open':
       my_ftp.open(*arguments)
     elif command == 'disconnect':
