@@ -119,7 +119,14 @@ class MyFTP:
       print('Not connected.')
       return
 
-    path = path if path else input('Remote directory ').split()[0]
+    if not path:
+      path = input('Remote directory ').split()
+
+    if not path:
+      print('cd remote directory.')
+      return
+      
+    path = path[0]
 
     self.send_cmd(f'CWD {path}')
     print(self.get_response(), end="")
@@ -130,10 +137,19 @@ class MyFTP:
       return
 
     if not filename:
-      filename = input('From name ').strip()
+      user_input = input('From name ').split()
+      if len(user_input) == 0:
+        print('Usage: rename from-name to-name')
+        return
+
+      filename = user_input[0]
+
+      if len(user_input) >= 2:
+        new_filename = user_input[1]
+
 
     if not new_filename:
-      new_filename = input('To name ').strip()
+      new_filename = input('To name ').split()[0]
 
     # check for valid filenames
     self.send_cmd(f'RNFR {filename}')
@@ -187,16 +203,16 @@ class MyFTP:
         print('Login failed.')
         return
 
-  def delete(self, filename = None):
-    if not self.socket_is_connected():
-      print('Not connected.')
-      return
+  # def delete(self, filename = None):
+  #   if not self.socket_is_connected():
+  #     print('Not connected.')
+  #     return
 
-    if not filename:
-      filename = input('Remote file ').strip()
+  #   if not filename:
+  #     filename = input('Remote file ').strip()
 
-    # self.send_cmd(f'DELE {filename}')
-    # print(self.get_response(), end="")
+  #   # self.send_cmd(f'DELE {filename}')
+  #   # print(self.get_response(), end="")
 
   def socket_is_connected(self):
     return self.client_socket is not None and self.client_socket.fileno() != -1
