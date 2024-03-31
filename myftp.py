@@ -66,10 +66,11 @@ class MyFTP:
 
       # password is null or invalid
       if resp.startswith('530'):
+        print('Login failed.')
         return
       
       # login successful
-      if resp.startswith('230'):
+      elif resp.startswith('230'):
         return
 
   def disconnect(self):
@@ -148,6 +149,44 @@ class MyFTP:
 
     return
 
+  def user(self, username = None, password = None):
+    if not self.socket_is_connected():
+      print('Not connected.')
+      return
+    
+    # request username
+    if not username:
+      username = input('Username ')
+
+    # username is null
+    if not username:
+      print('Usage: user username [password] [account]')
+      return
+
+    self.send_cmd(f'USER {username}')
+    resp = self.get_response()
+
+    print(resp, end="")
+
+    if resp.startswith('331'):
+      # request password
+      if not password:
+        password = input('Password: ')
+
+      self.send_cmd(f'PASS {password}')
+      resp = self.get_response()
+
+      print(resp, end="")
+
+      # login successful
+      if resp.startswith('230'):
+        return
+      
+      # password is null or invalid
+      elif resp.startswith('530'):
+        print('Login failed.')
+        return
+
   def socket_is_connected(self):
     return self.client_socket is not None and self.client_socket.fileno() != -1
 
@@ -196,6 +235,8 @@ def main():
       my_ftp.cd(*arguments)
     elif command == 'rename':
       my_ftp.rename(*arguments)
+    elif command == 'user':
+      my_ftp.user(*arguments)
     else:
       print('Invalid command.')
       continue
