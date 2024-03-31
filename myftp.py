@@ -219,11 +219,11 @@ def main():
     arguments = args[1:]
 
     # command can be lower case or upper case or mixed case
-    if command == 'quit' or command == 'bye':
+    if command in ['quit', 'bye']:
       my_ftp.quit()
     elif command == 'open':
       my_ftp.open(*arguments)
-    elif command == 'disconnect' or command == 'close':
+    elif command in ['disconnect', 'close']:
       my_ftp.disconnect()
     elif command == 'pwd':
       my_ftp.pwd()
