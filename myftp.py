@@ -120,13 +120,13 @@ class MyFTP:
       return
 
     if not path:
-      path = input('Remote directory ').split()
+      line = input('Remote directory ').split()
 
-    if not path:
-      print('cd remote directory.')
-      return
+      if not line:
+        print('cd remote directory.')
+        return
       
-    path = path[0]
+      path = line[0]
 
     self.send_cmd(f'CWD {path}')
     print(self.get_response(), end="")
@@ -203,16 +203,22 @@ class MyFTP:
         print('Login failed.')
         return
 
-  # def delete(self, filename = None):
-  #   if not self.socket_is_connected():
-  #     print('Not connected.')
-  #     return
+  def delete(self, filename = None, *args):
+    if not self.socket_is_connected():
+      print('Not connected.')
+      return
 
-  #   if not filename:
-  #     filename = input('Remote file ').strip()
+    if not filename:
+      line = input('Remote file ').split()
+      
+      if not line:
+        print('delete remote file.')
+        return
+    
+      filename = line[0]
 
-  #   # self.send_cmd(f'DELE {filename}')
-  #   # print(self.get_response(), end="")
+    self.send_cmd(f'DELE {filename}')
+    print(self.get_response(), end="")
 
   def socket_is_connected(self):
     return self.client_socket is not None and self.client_socket.fileno() != -1
@@ -265,7 +271,7 @@ def main():
     elif command == 'user':
       my_ftp.user(*arguments)
     elif command == 'delete':
-      pass
+      my_ftp.delete(*arguments)
     else:
       print('Invalid command.')
       continue
