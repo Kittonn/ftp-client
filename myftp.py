@@ -1,4 +1,6 @@
 import socket
+import time
+import os
 
 class MyFTP:
   def __init__(self):
@@ -220,6 +222,274 @@ class MyFTP:
     self.send_cmd(f'DELE {filename}')
     print(self.get_response(), end="")
 
+  def ls(self, remote_dir = None, local_file = None, *args):
+    if not self.socket_is_connected():
+      print('Not connected.')
+      return
+
+    data_socket, resp = self.init_data_connection()
+    print(resp, end="")
+
+    if not resp.startswith('200'):
+      return
+    
+    self.send_cmd(f'NLST {remote_dir}' if remote_dir else 'NLST')
+    resp = self.get_response()
+
+    print(resp, end="")
+
+    if resp.startswith('550'):
+      data_socket.close()
+      return
+    
+    elif resp.startswith('150'):
+      if local_file:
+        local_path = os.path.join(os.getcwd(), local_file)
+  
+        try:
+          with open(local_path, 'wb') as f:
+            pass
+
+        except PermissionError as e:
+          data_socket.close()
+          print(f"Error opening local file {local_file}.\n> {local_file[0]}: Permission denied")
+          return
+          
+        except FileNotFoundError as e:
+          data_socket.close()
+          print(f"Error opening local file {local_file}.\n> {local_file[0]}:No Such file or directory")
+          return
+
+        
+      data_conn, _ = data_socket.accept()
+      start_time = time.time()
+      size = 0
+      
+      while True:
+        data = data_conn.recv(1024)
+        if not data:
+          break
+
+        if local_file:
+          with open(local_path, 'ab') as f:
+            f.write(data)
+        else:
+          print(data.decode(), end="")
+
+        size += len(data)
+
+      end_time = time.time()
+
+      data_conn.close()
+      data_socket.close()
+
+      print(self.get_response(), end="")
+      self.print_performance(size, start_time, end_time)
+    
+    else:
+      data_socket.close()
+      return
+    
+  def get(self, remote_file = None, local_file = None, *args):
+    if not self.socket_is_connected():
+      print('Not connected.')
+      return   
+    
+    mode = 0
+
+    if not remote_file:
+      line = input('Remote file ').split()
+      
+      if not line:
+        print('Remote file get [ local-file ].')
+        return
+    
+      remote_file = line[0]
+
+      mode = 1
+
+    if not local_file and mode == 1:
+      local_file = input('Local file ').split()
+
+      local_file = local_file[0] if local_file else None
+
+    if not local_file: 
+      local_file = remote_file
+
+    data_socket, resp = self.init_data_connection()
+
+    print(resp, end="")
+
+    if not resp.startswith('200'):
+      data_socket.close()
+      return
+    
+    if resp.startswith('200'):
+      self.send_cmd(f'RETR {remote_file}')
+      resp = self.get_response()
+
+      print(resp, end="")
+
+      if resp.startswith('550'):
+        data_socket.close()
+        return
+      
+      elif resp.startswith('150'): 
+        local_path = os.path.join(os.getcwd(), local_file)
+
+        try:
+          with open(local_path, 'wb') as f:
+            pass
+
+        except PermissionError as e:
+          data_socket.close()
+          print(f"Error opening local file {local_file}.\n> {local_file[0]}: Permission denied")
+          return
+
+        except FileNotFoundError as e:
+          data_socket.close()
+          print(f"Error opening local file {local_file}.\n> {local_file[0]}: No such file or directory")
+          return
+        
+        data_conn, _ = data_socket.accept()
+        start_time = time.time()
+        size = 0
+        
+        while True:
+          data = data_conn.recv(1024)
+          if not data:
+            break
+
+          with open(local_path, 'ab') as f:
+            f.write(data)
+
+          size += len(data)
+
+        end_time = time.time()
+
+        data_conn.close()
+        data_socket.close()
+
+        print(self.get_response(), end="")
+
+        self.print_performance(size, start_time, end_time)
+
+      else:
+        data_socket.close()
+        return
+
+  def put(self, local_file = None, remote_file = None, *args):
+    if not self.socket_is_connected():
+      print('Not connected.')
+      return   
+
+    if not local_file:
+      line = input('Local file ').split()
+
+      if not line:
+        print('Local file put: remote file.')
+        return
+      
+      local_file = line[0]
+      
+    if not remote_file:
+      line = input('Remote file ').split()
+
+      if not line:
+        remote_file = local_file
+      else:
+        remote_file = line[0]
+
+    data_socket, resp = self.init_data_connection()
+
+    local_path = os.path.join(os.getcwd(), local_file)
+    
+    try:
+      with open(local_path, 'rb') as f:
+        pass
+
+    except FileNotFoundError as e:
+      data_socket.close()
+      print(f"{local_file}: File not found")
+      return
+
+    print(resp, end="")
+
+    if not resp.startswith('200'):
+      data_socket.close()
+      return
+    
+    if resp.startswith('200'):
+      self.send_cmd(f'STOR {remote_file}')
+      resp = self.get_response()
+
+      print(resp, end="")
+
+      if resp.startswith('550'):
+        data_socket.close()
+        return
+      
+      elif resp.startswith('150'): 
+        try:
+          with open(local_path, 'rb') as f:
+            pass
+
+        except FileNotFoundError as e:
+          data_socket.close()
+          print(f"{local_file}: File not found")
+          return
+        
+        data_conn, _ = data_socket.accept()
+        start_time = time.time()
+        size = 0
+        
+        with open(local_path, 'rb') as f:
+          while True:
+            data = f.read(1024)
+            if not data:
+              break
+
+            data_conn.send(data)
+            size += len(data)
+
+        end_time = time.time()
+
+        data_conn.close()
+        data_socket.close()
+
+        print(self.get_response(), end="")
+
+        self.print_performance(size, start_time, end_time)
+
+      else:
+        data_socket.close()
+        return
+    
+  # TODO: handle case zero division error
+  def print_performance(self, size, start_time, end_time):
+    delta_time = end_time - start_time
+    throughput = size / 1024 / (delta_time + 1e-10)
+
+    print(f'ftp: {size} bytes sent in {delta_time:.2f}Seconds {throughput:.2f}Kbytes/sec.')
+
+  def init_data_connection(self):
+    data_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    host = self.client_socket.getsockname()[0]
+    formatted_host = host.replace('.', ',')
+
+    data_socket.settimeout(10 )
+    data_socket.bind((host, 0))
+    data_socket.listen(1)
+
+    port = data_socket.getsockname()[1]
+
+    self.send_cmd(f'PORT {formatted_host},{port // 256},{port % 256}')
+
+    resp = self.get_response()
+
+    return data_socket, resp
+
   def socket_is_connected(self):
     return self.client_socket is not None and self.client_socket.fileno() != -1
 
@@ -272,6 +542,12 @@ def main():
       my_ftp.user(*arguments)
     elif command == 'delete':
       my_ftp.delete(*arguments)
+    elif command == 'ls':
+      my_ftp.ls(*arguments)
+    elif command == 'get':
+      my_ftp.get(*arguments)
+    elif command == 'put':
+      my_ftp.put(*arguments)
     else:
       print('Invalid command.')
       continue
