@@ -38,7 +38,6 @@ class MyFTP:
       self.send_cmd('OPTS UTF8 ON')
       print(self.get_response(), end="")
 
-    # TODO: Handle exceptions for error cases
     except socket.timeout as e:
       print('> ftp: connect :Connection timed out')
 
@@ -230,12 +229,26 @@ class MyFTP:
     data_socket, resp = self.init_data_connection()
     print(resp, end="")
 
+    local_path = os.path.join(os.getcwd(), local_file) if local_file else None
+
+    if local_file:
+      folder_path = os.path.dirname(local_path)
+
+      if (os.path.exists(folder_path) and not os.path.isdir(folder_path)) or not os.path.exists(folder_path):
+        print(f"Error opening local file {local_file}.\n> {local_file[0]}:No Such file or directory")
+        data_socket.close()
+        return
+      
+      if os.path.isdir(local_file) and not os.path.isfile(local_file):
+        print(f"Error opening local file {local_file}.\n> {local_file[0]}:No Such file or directory")
+        data_socket.close()
+        return
+
     if not resp.startswith('200'):
       return
     
     self.send_cmd(f'NLST {remote_dir}' if remote_dir else 'NLST')
     resp = self.get_response()
-
     print(resp, end="")
 
     if resp.startswith('550'):
@@ -243,9 +256,7 @@ class MyFTP:
       return
     
     elif resp.startswith('150'):
-      if local_file:
-        local_path = os.path.join(os.getcwd(), local_file)
-  
+      if local_file:  
         try:
           with open(local_path, 'wb') as f:
             pass
@@ -284,7 +295,7 @@ class MyFTP:
       data_socket.close()
 
       print(self.get_response(), end="")
-      self.print_performance(size, start_time, end_time)
+      self.print_performance(size, start_time, end_time, 'ls')
     
     else:
       data_socket.close()
@@ -372,7 +383,7 @@ class MyFTP:
 
         print(self.get_response(), end="")
 
-        self.print_performance(size, start_time, end_time)
+        self.print_performance(size, start_time, end_time, 'get')
 
       else:
         data_socket.close()
@@ -383,6 +394,8 @@ class MyFTP:
       print('Not connected.')
       return   
 
+    mode = 0 
+
     if not local_file:
       line = input('Local file ').split()
 
@@ -390,20 +403,25 @@ class MyFTP:
         print('Local file put: remote file.')
         return
       
+      mode = 1
       local_file = line[0]
       
-    if not remote_file:
+    if not remote_file and mode == 1:
       line = input('Remote file ').split()
 
-      if not line:
-        remote_file = local_file
-      else:
-        remote_file = line[0]
+      remote_file = line[0] if line else None
+
+    if not remote_file:
+      remote_file = local_file
+
+    local_path = os.path.join(os.getcwd(), local_file)
+
+    if os.path.isdir(local_path) and not os.path.isfile(local_path):
+      print("Error opening local file pcap.")
+      return
 
     data_socket, resp = self.init_data_connection()
 
-    local_path = os.path.join(os.getcwd(), local_file)
-    
     try:
       with open(local_path, 'rb') as f:
         pass
@@ -459,18 +477,22 @@ class MyFTP:
 
         print(self.get_response(), end="")
 
-        self.print_performance(size, start_time, end_time)
+        self.print_performance(size, start_time, end_time, 'put')
 
       else:
         data_socket.close()
         return
     
-  # TODO: handle case zero division error
-  def print_performance(self, size, start_time, end_time):
+  def print_performance(self, size, start_time, end_time, mode):
     delta_time = end_time - start_time
     throughput = size / 1024 / (delta_time + 1e-10)
 
-    print(f'ftp: {size} bytes sent in {delta_time:.2f}Seconds {throughput:.2f}Kbytes/sec.')
+    if mode in ['ls', 'get']:
+        action_word = 'received'
+    elif mode == 'put':
+        action_word = 'sent'
+
+    print(f'ftp: {size} bytes {action_word} in {delta_time:.2f}Seconds {throughput:.2f}Kbytes/sec.')
 
   def init_data_connection(self):
     data_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -521,32 +543,31 @@ def main():
     command = args[0]
     arguments = args[1:]
 
-    # command can be lower case or upper case or mixed case
-    if command in ['quit', 'bye']:
+    if command.lower() in ['quit', 'bye']:
       my_ftp.quit()
-    elif command == 'open':
+    elif command.lower() == 'open':
       my_ftp.open(*arguments)
-    elif command in ['disconnect', 'close']:
+    elif command.lower() in ['disconnect', 'close']:
       my_ftp.disconnect()
-    elif command == 'pwd':
+    elif command.lower() == 'pwd':
       my_ftp.pwd()
-    elif command == 'ascii':
+    elif command.lower() == 'ascii':
       my_ftp.ascii()
-    elif command == 'binary':
+    elif command.lower() == 'binary':
       my_ftp.binary()
-    elif command == 'cd':
+    elif command.lower() == 'cd':
       my_ftp.cd(*arguments)
-    elif command == 'rename':
+    elif command.lower() == 'rename':
       my_ftp.rename(*arguments)
-    elif command == 'user':
+    elif command.lower() == 'user':
       my_ftp.user(*arguments)
-    elif command == 'delete':
+    elif command.lower() == 'delete':
       my_ftp.delete(*arguments)
     elif command == 'ls':
       my_ftp.ls(*arguments)
-    elif command == 'get':
+    elif command.lower() == 'get':
       my_ftp.get(*arguments)
-    elif command == 'put':
+    elif command.lower() == 'put':
       my_ftp.put(*arguments)
     else:
       print('Invalid command.')
